@@ -1,0 +1,14 @@
+services:
+  timelapse:
+    build: .
+    privileged: true
+    restart: always
+    environment:
+      - INTERVAL=60
+      - IMGS_PATH=imgs
+      - LD_LIBRARY_PATH=/opt/vc/lib
+    devices:
+      - /dev/vchiq
+    volumes:
+      - /opt/vc:/opt/vc
+      - ./imgs:/usr/src/app/imgs
