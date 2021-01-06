@@ -1,5 +1,16 @@
 services:
-  timelapse:
+  nginx:
+    image: nginx
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      - NGINX_PORT=8080
+    volumes:
+      - ./default.conf.template:/etc/nginx/templates/default.conf.template
+      - ./imgs:/mnt/imgs
+      - ./index.html:/usr/share/nginx/html/index.html
+  imager:
     build: .
     privileged: true
     restart: always
