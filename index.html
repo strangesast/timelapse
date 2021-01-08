@@ -3,10 +3,23 @@
   <head>
     <meta charset="utf-8">
     <title>timelapse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body, html {
+        width: 100%;
+      }
+      body {
+        margin: 0;
+      }
+      video {
+        width: 100%;
+        max-width: 1000px;
+      }
+    </style>
     <!--<link rel="stylesheet" href="style.css">-->
   </head>
   <body>
-    <video controls autoplay loop muted playsinline>
+    <video controls autoplay loop muted>
       <source src="/imgs/timelapse.mp4" type="video/mp4">
     </video>
   </body>

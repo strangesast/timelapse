@@ -1,41 +1,64 @@
 from pathlib import Path
 from datetime import datetime
+from PIL import Image, ImageStat
 from asyncio.subprocess import PIPE
 import subprocess
 import threading
 import asyncio
 import os
 
+THRESHOLD = 78
+
+
+def brightness(image_file):
+   im = Image.open(image_file).convert('L')
+   stat = ImageStat.Stat(im)
+   return stat.mean[0]
+
+
+async def run_command(args, **kwargs):
+    process = await asyncio.create_subprocess_exec(*args, **kwargs, stdout=PIPE, stderr=PIPE)
+    await process.wait()
+
 
 async def capture_img(imgs_path: Path):
     try:
         roi = [0, 0.4, 1, 1]
-        img_path = imgs_path / 'last.jpg'
+        jpg_path = imgs_path / 'last.jpg'
 
         dt = datetime.now()
-        args = ['/opt/vc/bin/raspistill', '-roi', ','.join(map(str, roi)), '-o', str(img_path)]
-        process = await asyncio.create_subprocess_exec(*args, stdout=PIPE, stderr=PIPE)
-        ret = await process.wait()
+        args = ['/opt/vc/bin/raspistill', '-roi', ','.join(map(str, roi)), '-o', str(jpg_path)]
+        await run_command(args, cwd=imgs_path)
 
-        #args = ['convert', str(img_path), '-gravity', 'SouthEast', '-fill', 'white', '-pointsize', '100', '-annotate', '0', dt.strftime('%Y/%m/%d %H:%M:%S'), str(img_path)]
-        #process = await asyncio.create_subprocess_exec(*args, stdout=PIPE, stderr=PIPE)
-        #ret = await process.wait()
+        b = brightness(jpg_path)
+        if b < THRESHOLD:
+            jpg_path.unlink()
+            return
 
-        target_path = imgs_path / 'img{:%Y-%m-%d_%H:%M:%S}.jpg'.format(dt)
-        img_path.rename(target_path)
+        webp_path = imgs_path / (jpg_path.stem + '.webp')
+        args = ['cwebp', str(jpg_path), '-o', str(webp_path)]
+        await run_command(args, cwd=imgs_path)
 
-        imgs = list(imgs_path.glob('*.jpg'))
-        if len(imgs) % 5 == 0:
+        # annotation
+        #args = ['convert', str(webp_path), '-gravity', 'SouthEast', '-fill', 'white', '-pointsize', '100', '-annotate', '0', dt.strftime('%Y/%m/%d %H:%M:%S'), str(webp_path)]
+        #await run_command(args)
+
+        target_path = imgs_path / 'img{:%Y-%m-%d_%H:%M:%S}.webp'.format(dt)
+        webp_path.rename(target_path)
+
+        frame_path = imgs_path / (target_path.stem + '_frame.webp')
+        args = ['cwebp', '-resize', '480', '0', str(target_path), '-o', str(frame_path)]
+        await run_command(args, cwd=imgs_path)
+
+        imgs = list(imgs_path.glob('*_frame.webp'))
+        timelapse_path = imgs_path / 'timelapse.mp4'
+        if not timelapse_path.is_file() or len(imgs) % 5 == 0:
             next_timelapse_path = imgs_path / 'next_timelapse.mp4'
-            args = ['ffmpeg', '-y', '-pattern_type', 'glob', '-i', '*.jpg', '-vf', 'scale=480:320', str(next_timelapse_path.resolve())]
-            process = await asyncio.create_subprocess_exec(*args, cwd=imgs_path, stdout=PIPE, stderr=PIPE)
-            await process.wait()
+            args = ['ffmpeg', '-y', '-pattern_type', 'glob', '-i', '*_frame.webp', str(next_timelapse_path.resolve())]
+            await run_command(args, cwd=imgs_path)
 
             if next_timelapse_path.is_file():
-                timelapse_path = imgs_path / 'timelapse.mp4'
                 next_timelapse_path.rename(timelapse_path)
-
-        
 
     except asyncio.CancelledError:
         process.terminate()
