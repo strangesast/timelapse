@@ -18,12 +18,16 @@ def brightness(image_file):
 
 async def run_command(args, **kwargs):
     process = await asyncio.create_subprocess_exec(*args, **kwargs, stdout=PIPE, stderr=PIPE)
-    await process.wait()
+    stdout, stderr = await process.communicate()
+    if process.returncode != 0:
+        print(stdout, flush=True)
+        print(stderr, flush=True)
+        raise Exception("AAAAAHHHHHH failure")
 
 
 async def capture_img(imgs_path: Path):
     try:
-        roi = [0, 0.4, 1, 1]
+        roi = [0, 0.3, 1, 1]
         jpg_path = imgs_path / 'last.jpg'
 
         dt = datetime.now()

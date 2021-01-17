@@ -1,0 +1,10 @@
+body, html {
+  width: 100%;
+}
+body {
+  margin: 0;
+}
+video {
+  width: 100%;
+  max-width: 1000px;
+}

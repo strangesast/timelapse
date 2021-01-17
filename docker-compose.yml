@@ -9,7 +9,7 @@ services:
     volumes:
       - ./default.conf.template:/etc/nginx/templates/default.conf.template
       - ./imgs:/mnt/imgs
-      - ./index.html:/usr/share/nginx/html/index.html
+      - ./html:/usr/share/nginx/html
   imager:
     build: .
     privileged: true
